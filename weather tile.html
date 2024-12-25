@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <!-- SharpTools stio library -->
+  <script src="https://cdn.sharptools.io/js/custom-tiles/0.2.1/stio.js"></script>
+  <meta charset="UTF-8"/>
+  <title>Temperature Tile - Enhanced Colors</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .container {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.3s ease;
+      font-family: sans-serif;
+      color: #fff;
+      background: #0014B4; /* default fallback: dark blue */
+    }
+    #temperature {
+      font-size: 72px;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="tileContainer">
+    <div id="temperature">--°C</div>
+  </div>
+  <script>
+    stio.ready(() => {
+      fetchWeather();
+      setInterval(fetchWeather, 7200000); // every 2 hours
+    });
+
+    async function fetchWeather() {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=31.7823&longitude=35.3075&current_weather=true&timezone=Asia/Jerusalem';
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        const data = await response.json();
+        updateDisplay(data);
+      } catch (error) {
+        console.error('Error fetching weather:', error);
+        document.getElementById('temperature').textContent = 'שגיאה';
+      }
+    }
+
+    function updateDisplay(data) {
+      const weather = data?.current_weather;
+      if (!weather) {
+        document.getElementById('temperature').textContent = 'אין נתונים';
+        return;
+      }
+      const tempC = Math.round(weather.temperature);
+      document.getElementById('temperature').textContent = `${tempC}°C`;
+      const container = document.getElementById('tileContainer');
+      container.style.background = getTemperatureColor(tempC);
+    }
+
+    function getTemperatureColor(tempC) {
+      // Define color stops for our temperature scale
+      const colorStops = [
+        { temp: -5, color: { r: 0, g: 20, b: 180 }},    // Darker deep blue for very cold
+        { temp: 5, color: { r: 0, g: 70, b: 220 }},     // Darker medium blue for cold
+        { temp: 15, color: { r: 51, g: 133, b: 255 }},  // Slightly darker blue for cool
+        { temp: 20, color: { r: 71, g: 153, b: 255 }},  // Darker light blue for mild
+        { temp: 25, color: { r: 255, g: 128, b: 0 }},   // Orange for warm
+        { temp: 35, color: { r: 255, g: 60, b: 0 }},    // Orange-red for hot
+        { temp: 45, color: { r: 255, g: 0, b: 0 }}      // Pure red for very hot
+      ];
+
+      // Clamp temperature to our range
+      const temp = Math.max(-5, Math.min(tempC, 45));
+
+      // Find the two color stops we're between
+      let lower = colorStops[0];
+      let upper = colorStops[colorStops.length - 1];
+      
+      for (let i = 0; i < colorStops.length - 1; i++) {
+        if (temp >= colorStops[i].temp && temp <= colorStops[i + 1].temp) {
+          lower = colorStops[i];
+          upper = colorStops[i + 1];
+          break;
+        }
+      }
+
+      // Calculate ratio between the two stops
+      const ratio = (temp - lower.temp) / (upper.temp - lower.temp);
+
+      // Interpolate between colors
+      const r = Math.round(lower.color.r + (upper.color.r - lower.color.r) * ratio);
+      const g = Math.round(lower.color.g + (upper.color.g - lower.color.g) * ratio);
+      const b = Math.round(lower.color.b + (upper.color.b - lower.color.b) * ratio);
+
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+  </script>
+</body>
+</html>
