@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <script src="https://cdn.sharptools.io/js/custom-tiles/0.2.1/stio.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .container {
+            padding: 20px;
+            font-family: 'Rubik', sans-serif;
+            min-height: 100vh;
+            background: #0a0f2d;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .location {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 12px;
+        }
+
+        .parasha {
+            font-size: 28px;
+            font-weight: 500;
+            margin: 8px 0;
+        }
+
+        .holiday-text {
+            font-size: 28px;
+            color: #ffd700;
+            margin: 8px 0;
+        }
+
+        .upcoming-event {
+            font-size: 24px;
+            color: #ffd700;
+            margin: 16px 0;
+            opacity: 0.9;
+        }
+
+        .time-box {
+            background: rgba(30, 41, 82, 0.8);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+        }
+
+        .time-label {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .time-value {
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            margin-left: 8px;
+            fill: white;
+        }
+
+        .date-info {
+            text-align: center;
+            font-size: 20px;
+            padding: 16px;
+            margin-top: auto;
+        }
+      .times-container {
+  direction: rtl;
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title" id="main-title">Loading...</div>
+            <div class="location">מעלה אדומים</div>
+            <div class="parasha" id="parasha">Loading...</div>
+            <div class="holiday-text" id="holiday-text" style="display: none;"></div>
+          <div class="upcoming-event" id="upcoming-event" style="display: none; direction: rtl; text-align: center;"></div>
+        </div>
+        
+        <div class="times-container" id="times-container">
+            <!-- Times will be added dynamically -->
+        </div>
+
+        
+        <div class="date-info" id="date-info">Loading...</div>
+    </div>
+  <script>
+    stio.ready(function(data) {
+        const HEBREW_NUMBERS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שביעי', 'שמיני'];
+        
+        const ICONS = {
+            candles: "M20,11H23V13H20V11M1,11H4V13H1V11M13,1V4H11V1H13M4.92,3.5L7.05,5.64L5.63,7.05L3.5,4.93L4.92,3.5M16.95,5.63L19.07,3.5L20.5,4.93L18.37,7.05L16.95,5.63M12,6A6,6 0 0,1 18,12C18,14.22 16.79,16.16 15,17.2V19A1,1 0 0,1 14,20H10A1,1 0 0,1 9,19V17.2C7.21,16.16 6,14.22 6,12A6,6 0 0,1 12,6M14,21V22A1,1 0 0,1 13,23H11A1,1 0 0,1 10,22V21H14M11,18H13V15.87C14.73,15.43 16,13.86 16,12A4,4 0 0,0 12,8A4,4 0 0,0 8,12C8,13.86 9.27,15.43 11,15.87V18Z",
+            havdalah: "M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z"
+        };
+
+        // Holiday categories
+        const HOLIDAY_TYPES = {
+            MAJOR: 'major',
+            MINOR: 'minor',
+            MODERN: 'modern',
+            FAST: 'fast',
+            SPECIAL_SHABBAT: 'special_shabbat',
+            ROSH_CHODESH: 'rosh_chodesh'
+        };
+
+        // Major holidays list
+        const MAJOR_HOLIDAYS = [
+            'Rosh Hashana', 'Yom Kippur', 'Sukkot', 'Shmini Atzeret',
+            'Simchat Torah', 'Pesach', 'Shavuot'
+        ];
+
+        // Special Shabbatot
+        const SPECIAL_SHABBATOT = [
+            'Shuva', 'Shirah', 'Shekalim', 'Zachor', 'Parah',
+            'HaChodesh', 'HaGadol', 'Chazon', 'Nachamu'
+        ];
+
+        function formatTime(dateStr) {
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleTimeString('he-IL', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            } catch (error) {
+                return 'שגיאה בזמן';
+            }
+        }
+
+        function formatHebrewDate(dateStr) {
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('he-IL', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                });
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function createTimeBox(label, time, icon) {
+            return `
+                <div class="time-box">
+                    <div class="time-label">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="${icon}"/>
+                        </svg>
+                        ${label}
+                    </div>
+                    <div class="time-value">${time}</div>
+                </div>
+            `;
+        }
+
+        function isWithinWeek(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            const oneWeek = 7 * 24 * 60 * 60 * 1000;
+            return date - today <= oneWeek && date > today;
+        }
+
+        function getHolidayType(holiday) {
+            if (MAJOR_HOLIDAYS.some(h => holiday.title.includes(h))) {
+                return HOLIDAY_TYPES.MAJOR;
+            }
+            if (holiday.title.includes('Chanukah')) {
+                return HOLIDAY_TYPES.MINOR;
+            }
+            if (holiday.category === 'roshchodesh') {
+                return HOLIDAY_TYPES.ROSH_CHODESH;
+            }
+            if (SPECIAL_SHABBATOT.some(s => holiday.title.includes(s))) {
+                return HOLIDAY_TYPES.SPECIAL_SHABBAT;
+            }
+            if (holiday.category === 'modern') {
+                return HOLIDAY_TYPES.MODERN;
+            }
+            if (holiday.category === 'fast') {
+                return HOLIDAY_TYPES.FAST;
+            }
+            return HOLIDAY_TYPES.MINOR;
+        }
+
+        function getUpcomingEventText(holiday) {
+            const date = formatHebrewDate(holiday.date);
+            const time = formatTime(holiday.date);
+            return `הקרוב: ${holiday.hebrew} - ${date} ${time}`;
+        }
+
+        function handleHoliday(holiday) {
+            const type = getHolidayType(holiday);
+            let timeBoxesHTML = '';
+            let title = holiday.hebrew;
+            let subtext = '';
+
+            switch (type) {
+                case HOLIDAY_TYPES.MAJOR:
+                    timeBoxesHTML += createTimeBox(
+                        'כניסת החג',
+                        formatTime(holiday.date),
+                        ICONS.candles
+                    );
+                    if (holiday.havdalah) {
+                        timeBoxesHTML += createTimeBox(
+                            'צאת החג',
+                            formatTime(holiday.havdalah),
+                            ICONS.havdalah
+                        );
+                    }
+                    break;
+
+                case HOLIDAY_TYPES.MINOR:
+                    if (holiday.title.includes('Chanukah')) {
+                        const candleNum = parseInt(holiday.title.match(/\d+/)[0]);
+                        const hebrewNum = HEBREW_NUMBERS[candleNum - 1];
+                        title = `חנוכה: נר ${hebrewNum}`;
+                        timeBoxesHTML += createTimeBox(
+                            'הדלקת נרות',
+                            formatTime(holiday.date),
+                            ICONS.candles
+                        );
+                    }
+                    break;
+
+                case HOLIDAY_TYPES.FAST:
+                    timeBoxesHTML += createTimeBox(
+                        'תחילת הצום',
+                        formatTime(holiday.start),
+                        ICONS.candles
+                    );
+                    timeBoxesHTML += createTimeBox(
+                        'סיום הצום',
+                        formatTime(holiday.end),
+                        ICONS.havdalah
+                    );
+                    break;
+
+                case HOLIDAY_TYPES.ROSH_CHODESH:
+                    timeBoxesHTML += createTimeBox(
+                        'כניסת ראש חודש',
+                        formatTime(holiday.date),
+                        ICONS.candles
+                    );
+                    break;
+
+                default:
+                    if (holiday.candles) {
+                        timeBoxesHTML += createTimeBox(
+                            'כניסה',
+                            formatTime(holiday.date),
+                            ICONS.candles
+                        );
+                    }
+                    if (holiday.havdalah) {
+                        timeBoxesHTML += createTimeBox(
+                            'יציאה',
+                            formatTime(holiday.havdalah),
+                            ICONS.havdalah
+                        );
+                    }
+            }
+
+            return { title, timeBoxesHTML, subtext };
+        }
+
+        async function fetchJewishCalendarData() {
+            try {
+                const today = new Date();
+                const nextMonth = new Date(today);
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+                const [shabbatResponse, holidayResponse] = await Promise.all([
+                    fetch(`https://www.hebcal.com/shabbat?cfg=json&geonameid=6693680&M=on&lg=he`),
+                    fetch(`https://www.hebcal.com/hebcal?cfg=json&geonameid=6693680&M=on&lg=he&start=${today.toISOString().split('T')[0]}&end=${nextMonth.toISOString().split('T')[0]}`)
+                ]);
+
+                const shabbatData = await shabbatResponse.json();
+                const holidayData = await holidayResponse.json();
+
+                let timeBoxesHTML = '';
+                let mainTitle = 'שבת שלום';
+
+                // Process all holidays and sort by date
+                const holidays = holidayData.items
+                    .filter(item => ['holiday', 'roshchodesh', 'modern', 'fast'].includes(item.category))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                // Find current and upcoming holidays
+                const currentHoliday = holidays.find(h => {
+                    const date = new Date(h.date);
+                    return date.toDateString() === today.toDateString();
+                });
+
+                const upcomingHoliday = holidays.find(h => 
+                    isWithinWeek(h.date) && new Date(h.date) > today
+                );
+
+                // Handle current holiday if exists
+                if (currentHoliday) {
+                    const holidayInfo = handleHoliday(currentHoliday);
+                    mainTitle = holidayInfo.title;
+                    timeBoxesHTML = holidayInfo.timeBoxesHTML;
+                    if (holidayInfo.subtext) {
+                        document.getElementById('holiday-text').textContent = holidayInfo.subtext;
+                        document.getElementById('holiday-text').style.display = 'block';
+                    }
+                }
+
+                // Handle Shabbat times
+                const candleLighting = shabbatData.items?.find(item => item.category === 'candles');
+                const havdalah = shabbatData.items?.find(item => item.category === 'havdalah');
+                const parasha = shabbatData.items?.find(item => item.category === 'parashat');
+
+                if (candleLighting) {
+                    timeBoxesHTML += createTimeBox(
+                        'הדלקת נרות שבת',
+                        formatTime(candleLighting.date),
+                        ICONS.candles
+                    );
+                }
+
+                if (havdalah) {
+                    timeBoxesHTML += createTimeBox(
+                        'צאת השבת',
+                        formatTime(havdalah.date),
+                        ICONS.havdalah
+                    );
+                }
+
+                // Show upcoming holiday if within a week
+                if (upcomingHoliday) {
+                    document.getElementById('upcoming-event').textContent = 
+                        getUpcomingEventText(upcomingHoliday);
+                    document.getElementById('upcoming-event').style.display = 'block';
+                } else {
+                    document.getElementById('upcoming-event').style.display = 'none';
+                }
+
+                // Update UI
+                document.getElementById('main-title').textContent = mainTitle;
+                
+                if (parasha) {
+                    document.getElementById('parasha').textContent = `פרשת ${parasha.hebrew}`;
+                    document.getElementById('parasha').style.display = 'block';
+                } else {
+                    document.getElementById('parasha').style.display = 'none';
+                }
+
+                document.getElementById('times-container').innerHTML = timeBoxesHTML;
+                
+                if (candleLighting) {
+                    document.getElementById('date-info').textContent = formatHebrewDate(candleLighting.date);
+                }
+
+            } catch (error) {
+                console.error('Error fetching Jewish calendar data:', error);
+                document.getElementById('times-container').innerHTML = createTimeBox(
+                    'שגיאה בטעינה',
+                    'נסה שוב מאוחר יותר',
+                    ICONS.candles
+                );
+            }
+        }
+
+        // Initial fetch
+        fetchJewishCalendarData();
+
+        // Refresh every 5 minutes
+        setInterval(fetchJewishCalendarData, 300000);
+    });
+</script>
+</body>
+</html>
