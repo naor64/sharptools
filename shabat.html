@@ -1,656 +1,1305 @@
-<!DOCTYPE html>
-<html dir="rtl" lang="he">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="לוח זמני היום - מעלה אדומים">
-    <title>לוח זמני היום - מעלה אדומים</title>
-    <script src="https://cdn.sharptools.io/js/custom-tiles/0.2.1/stio.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
 
-        :root {
-            --primary-bg: #0a0f2d;
-            --secondary-bg: rgba(30, 41, 82, 0.8);
-            --primary-text: #ffffff;
-            --highlight-text: #ffd700;
-            --error-text: #ff6b6b;
-            --fast-text: #ff8c00;
-            --yomtov-text: #98fb98;
-            --modern-text: #87ceeb;
-            --spacing-xs: 8px;
-            --spacing-sm: 12px;
-            --spacing-md: 16px;
-            --spacing-lg: 20px;
-            --spacing-xl: 24px;
-            --font-size-sm: 16px;
-            --font-size-md: 20px;
-            --font-size-lg: 24px;
-            --font-size-xl: 28px;
-            --font-size-xxl: 32px;
-            --font-size-huge: 42px;
-            --border-radius: 16px;
-            --transition-speed: 0.3s;
-        }
 
-        body {
-            margin: 0;
-            padding: 0;
-            direction: rtl;
-            background: var(--primary-bg);
-            font-family: 'Rubik', sans-serif;
-            line-height: 1.6;
-            color: var(--primary-text);
-        }
 
-        .container {
-            padding: var(--spacing-lg);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-            direction: rtl;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="לוח זמני היום - מעלה אדומים">
+<title>לוח זמני היום - מעלה אדומים</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.4/luxon.min.js"></script>
+<!-- stio library (needed for Custom Tile features) -->
+<script src="https://cdn.sharptools.io/js/custom-tiles/0.2.1/stio.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet">
 
-        .header {
-            text-align: center;
-            padding: var(--spacing-lg) 0;
-        }
+<!--
+  ==================================================================
+  TILE SETTINGS
+  Add settings for Shabbat Switch and a boolean to disable automation
+  ==================================================================
+-->
+<script type="application/json" id="tile-settings">
+{
+"schema": "0.2.0",
+"settings": [
+{
+  "type": "THING",
+  "name": "mySwitch",
+  "label": "Shabbat Switch",
+  "filters": {"capabilities": ["switch"]}
+},
+{
+  "type": "BOOLEAN",
+  "name": "disableAutomation",
+  "label": "Disable Automation"
+}
+],
+"name": "shabat"
+}
+</script>
 
-        .title {
-            font-size: var(--font-size-huge);
-            font-weight: 700;
-            margin-bottom: var(--spacing-sm);
-        }
+<style>
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
 
-        .location {
-            font-size: var(--font-size-lg);
-            font-weight: 400;
-            margin-bottom: var(--spacing-sm);
-        }
+:root {
+/* Modern Color Palette */
+--primary-bg: #0f172a;
+--secondary-bg: rgba(30, 41, 82, 0.7);
+--card-bg: rgba(30, 41, 82, 0.4);
+--gradient-start: #1e1b4b;
+--gradient-end: #0f172a;
+--primary-text: #f8fafc;
+--secondary-text: #cbd5e1;
+--highlight-text: #fbbf24;
+--error-text: #ef4444;
+--fast-text: #fb923c;
+--yomtov-text: #22c55e;
+--modern-text: #38bdf8;
+--success-color: #22c55e;
+--border-color: rgba(148, 163, 184, 0.1);
 
-        .parasha {
-            font-size: var(--font-size-xl);
-            font-weight: 500;
-            margin: var(--spacing-xs) 0;
-            color: var(--primary-text);
-        }
+/* Enhanced Spacing */
+--spacing-xxs: 4px;
+--spacing-xs: 8px;
+--spacing-sm: 12px;
+--spacing-md: 16px;
+--spacing-lg: 24px;
+--spacing-xl: 32px;
+--spacing-xxl: 48px;
 
-        .event-text {
-            font-size: var(--font-size-xxl);
-            color: var(--highlight-text);
-            margin: var(--spacing-md) 0;
-            font-weight: 500;
-            opacity: 1;
-            transition: opacity var(--transition-speed);
-        }
+/* Refined Typography */
+--font-size-xs: 14px;
+--font-size-sm: 16px;
+--font-size-md: 20px;
+--font-size-lg: 24px;
+--font-size-xl: 32px;
+--font-size-xxl: 40px;
+--font-size-huge: 48px;
 
-        .event-text.hidden {
-            display: none;
-        }
+/* Design Elements */
+--border-radius-sm: 8px;
+--border-radius-md: 12px;
+--border-radius-lg: 16px;
+--border-radius-xl: 24px;
+--transition-speed: 0.3s;
+--box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+--box-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+--blur-effect: blur(16px);
+}
 
-        .event-text.fast {
-            color: var(--fast-text);
-        }
+body {
+margin: 0;
+padding: 0;
+direction: rtl;
+background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+font-family: 'Rubik', sans-serif;
+line-height: 1.6;
+color: var(--primary-text);
+min-height: 100vh;
+}
 
-        .event-text.yomtov {
-            color: var(--yomtov-text);
-        }
+.container {
+max-width: 1200px;
+margin: 0 auto;
+padding: var(--spacing-lg) var(--spacing-md);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+gap: var(--spacing-lg);
+direction: rtl;
+position: relative;
+}
 
-        .event-text.modern {
-            color: var(--modern-text);
-        }
+/* Header Styles */
+.header {
+text-align: center;
+padding: var(--spacing-xl) 0;
+animation: fadeIn 0.5s ease-in;
+position: relative;
+}
 
-        .time-box {
-            background: var(--secondary-bg);
-            padding: var(--spacing-lg);
-            border-radius: var(--border-radius);
-            margin-bottom: var(--spacing-sm);
-            direction: rtl;
-        }
+.header::after {
+content: '';
+position: absolute;
+bottom: 0;
+left: 50%;
+transform: translateX(-50%);
+width: 60px;
+height: 4px;
+background: var(--highlight-text);
+border-radius: 2px;
+opacity: 0.6;
+}
 
-        .time-label {
-            display: flex;
-            align-items: center;
-            font-size: var(--font-size-xl);
-            margin-bottom: var(--spacing-xs);
-            direction: rtl;
-        }
+.title {
+font-size: var(--font-size-huge);
+font-weight: 700;
+margin-bottom: var(--spacing-md);
+text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+background: linear-gradient(120deg, var(--primary-text), var(--highlight-text));
+-webkit-background-clip: text;
+background-clip: text;
+-webkit-text-fill-color: transparent;
+}
 
-        .time-value {
-            font-size: var(--font-size-huge);
-            font-weight: 700;
-        }
+.location {
+font-size: var(--font-size-lg);
+font-weight: 500;
+margin-bottom: var(--spacing-sm);
+color: var(--secondary-text);
+display: flex;
+align-items: center;
+justify-content: center;
+gap: var(--spacing-xs);
+}
 
-        .time-description {
-            font-size: var(--font-size-md);
-            color: var(--highlight-text);
-            margin-top: var(--spacing-xs);
-        }
+.location::before {
+content: '📍';
+font-size: 1.2em;
+}
 
-        .icon {
-            width: 28px;
-            height: 28px;
-            margin-left: var(--spacing-sm);
-            fill: currentColor;
-        }
+.parasha {
+font-size: var(--font-size-xl);
+font-weight: 500;
+margin: var(--spacing-md) 0;
+color: var(--primary-text);
+transition: color var(--transition-speed);
+padding: var(--spacing-sm) var(--spacing-lg);
+border-radius: var(--border-radius-lg);
+background: var(--card-bg);
+backdrop-filter: var(--blur-effect);
+display: inline-block;
+}
 
-        .date-info {
-            text-align: center;
-            font-size: var(--font-size-md);
-            padding: var(--spacing-md);
-            margin-top: auto;
-        }
+/* Event Text Styles */
+.event-text {
+font-size: var(--font-size-xl);
+color: var(--highlight-text);
+margin: var(--spacing-md) 0;
+font-weight: 500;
+opacity: 1;
+transition: all var(--transition-speed);
+padding: var(--spacing-sm) var(--spacing-lg);
+border-radius: var(--border-radius-lg);
+background: var(--card-bg);
+backdrop-filter: var(--blur-effect);
+border: 1px solid var(--border-color);
+display: inline-block;
+}
 
-        .times-container {
-            direction: rtl;
-        }
+.event-text.hidden {
+display: none;
+}
 
-        .error-message {
-            color: var(--error-text);
-            text-align: center;
-            padding: var(--spacing-lg);
-            font-size: var(--font-size-md);
-            background: rgba(255, 107, 107, 0.1);
-            border-radius: var(--border-radius);
-            margin: var(--spacing-md) 0;
-        }
+.event-text.fast {
+color: var(--fast-text);
+border-color: rgba(251, 146, 60, 0.2);
+}
 
-        .loading {
-            text-align: center;
-            padding: var(--spacing-lg);
-            font-size: var(--font-size-lg);
-            color: var(--highlight-text);
-        }
+.event-text.yomtov {
+color: var(--yomtov-text);
+border-color: rgba(34, 197, 94, 0.2);
+}
 
-        @media (max-width: 768px) {
-            :root {
-                --font-size-huge: 36px;
-                --font-size-xxl: 28px;
-                --font-size-xl: 24px;
-                --font-size-lg: 20px;
-                --font-size-md: 18px;
-                --spacing-lg: 16px;
-                --spacing-md: 12px;
-            }
+.event-text.modern {
+color: var(--modern-text);
+border-color: rgba(56, 189, 248, 0.2);
+}
 
-            .container {
-                padding: var(--spacing-md);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="title" id="main-title">טוען...</div>
-            <div class="location">מעלה אדומים</div>
-            <div class="parasha" id="parasha"></div>
-            <div class="event-text" id="holiday-text"></div>
-            <div class="event-text" id="next-event"></div>
-        </div>
-        
-        <div class="times-container" id="times-container">
-            <div class="loading">טוען את הנתונים...</div>
-        </div>
+/* Time Box Styles */
+.time-box {
+background: var(--card-bg);
+padding: var(--spacing-lg);
+border-radius: var(--border-radius-xl);
+margin-bottom: var(--spacing-md);
+direction: rtl;
+transition: all var(--transition-speed);
+animation: slideIn 0.5s ease-out;
+backdrop-filter: var(--blur-effect);
+border: 1px solid var(--border-color);
+overflow: hidden;
+position: relative;
+}
 
-        <div class="date-info" id="date-info"></div>
+.time-box::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 3px;
+background: linear-gradient(to right, var(--highlight-text), transparent);
+opacity: 0;
+transition: opacity var(--transition-speed);
+}
+
+.time-box:hover {
+transform: translateY(-2px);
+box-shadow: var(--box-shadow-hover);
+background: var(--secondary-bg);
+}
+
+.time-box:hover::before {
+opacity: 1;
+}
+
+.time-label {
+display: flex;
+align-items: center;
+font-size: var(--font-size-lg);
+margin-bottom: var(--spacing-sm);
+direction: rtl;
+color: var(--secondary-text);
+}
+
+.time-value {
+font-size: var(--font-size-huge);
+font-weight: 700;
+color: var(--highlight-text);
+margin: var(--spacing-xs) 0;
+text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.time-description {
+font-size: var(--font-size-md);
+color: var(--secondary-text);
+margin-top: var(--spacing-xs);
+}
+
+.icon {
+width: 32px;
+height: 32px;
+margin-left: var(--spacing-sm);
+fill: currentColor;
+transition: transform var(--transition-speed);
+opacity: 0.8;
+}
+
+.time-box:hover .icon {
+transform: scale(1.1);
+opacity: 1;
+}
+
+/* Refresh Button Styles */
+.refresh-button {
+background: linear-gradient(135deg, var(--highlight-text), #f59e0b);
+color: var(--primary-bg);
+border: none;
+padding: var(--spacing-sm) var(--spacing-xl);
+border-radius: var(--border-radius-lg);
+cursor: pointer;
+margin: var(--spacing-lg) auto;
+display: flex;
+align-items: center;
+gap: var(--spacing-sm);
+font-family: 'Rubik', sans-serif;
+font-size: var(--font-size-md);
+font-weight: 500;
+transition: all var(--transition-speed);
+box-shadow: var(--box-shadow);
+}
+
+.refresh-button::before {
+content: '🔄';
+font-size: 1.2em;
+transition: transform var(--transition-speed);
+}
+
+.refresh-button:hover {
+transform: translateY(-2px);
+box-shadow: var(--box-shadow-hover);
+}
+
+.refresh-button:hover::before {
+transform: rotate(180deg);
+}
+
+.refresh-button:active {
+transform: translateY(1px);
+}
+
+.refresh-button.loading {
+opacity: 0.7;
+cursor: not-allowed;
+}
+
+.refresh-button.loading::before {
+animation: spin 1s linear infinite;
+}
+
+/* Status Message Styles */
+.status-message {
+text-align: center;
+padding: var(--spacing-sm) var(--spacing-lg);
+border-radius: var(--border-radius-lg);
+margin: var(--spacing-sm) 0;
+opacity: 0;
+transition: all var(--transition-speed);
+backdrop-filter: var(--blur-effect);
+transform: translateY(10px);
+position: fixed;
+bottom: var(--spacing-lg);
+left: 50%;
+transform: translateX(-50%);
+z-index: 1000;
+}
+
+.status-message.show {
+opacity: 1;
+transform: translateY(0);
+}
+
+.status-message.success {
+background: rgba(34, 197, 94, 0.2);
+border: 1px solid rgba(34, 197, 94, 0.3);
+color: var(--yomtov-text);
+}
+
+.status-message.error {
+background: rgba(239, 68, 68, 0.2);
+border: 1px solid rgba(239, 68, 68, 0.3);
+color: var(--error-text);
+}
+
+/* Loading State */
+.loading-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: var(--spacing-md);
+padding: var(--spacing-xl);
+}
+
+.loading-spinner {
+width: 40px;
+height: 40px;
+border: 4px solid var(--card-bg);
+border-left-color: var(--highlight-text);
+border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+
+.loading-text {
+color: var(--secondary-text);
+font-size: var(--font-size-md);
+}
+
+/* Enhanced Animations */
+@keyframes fadeIn {
+from { 
+    opacity: 0;
+    transform: translateY(-10px);
+}
+to { 
+    opacity: 1;
+    transform: translateY(0);
+}
+}
+
+@keyframes slideIn {
+from { 
+    opacity: 0;
+    transform: translateY(20px);
+}
+to { 
+    opacity: 1;
+    transform: translateY(0);
+}
+}
+
+@keyframes spin {
+from { transform: rotate(0deg); }
+to { transform: rotate(360deg); }
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+:root {
+    --font-size-huge: 36px;
+    --font-size-xxl: 28px;
+    --font-size-xl: 24px;
+    --font-size-lg: 20px;
+    --font-size-md: 16px;
+    --spacing-lg: 16px;
+    --spacing-md: 12px;
+}
+
+.container {
+    padding: var(--spacing-md);
+}
+
+.time-box {
+    padding: var(--spacing-md);
+}
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+* {
+    animation: none !important;
+    transition: none !important;
+}
+}
+
+@media screen and (max-width: 480px) {
+:root {
+    --font-size-huge: 32px;
+    --font-size-xxl: 24px;
+    --font-size-xl: 20px;
+    --font-size-lg: 18px;
+    --font-size-md: 16px;
+    --spacing-lg: 12px;
+    --spacing-md: 8px;
+}
+
+.time-box {
+    padding: var(--spacing-md);
+}
+
+.time-value {
+    font-size: var(--font-size-xl);
+}
+}
+
+@media screen and (max-width: 320px) {
+.container {
+    padding: var(--spacing-xs);
+    min-height: 180px;
+}
+}
+
+@media screen and (max-width: 480px) and (max-height: 320px) {
+.container {
+    padding: var(--spacing-xs);
+    min-height: 280px;
+}
+}
+
+@media screen and (min-width: 481px) and (max-width: 768px) {
+.container {
+    padding: var(--spacing-sm);
+    min-height: 400px;
+}
+}
+
+.event-text {
+position: relative;
+display: flex;
+align-items: center;
+gap: var(--spacing-sm);
+padding-right: var(--spacing-lg);
+padding-left: var(--spacing-lg);
+}
+
+.upcoming-indicator {
+font-size: 1.2em;
+margin-left: var(--spacing-xs);
+animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+0% { opacity: 1; }
+50% { opacity: 0.5; }
+100% { opacity: 1; }
+}
+
+.time-box {
+width: 100%;
+max-width: 100%;
+margin: 0 auto var(--spacing-sm);
+}
+
+.header {
+padding: var(--spacing-md) 0;
+}
+
+.event-text {
+width: auto;
+max-width: 100%;
+word-wrap: break-word;
+}
+
+/* Manual Shabbat Button Styles */
+.shabbat-button {
+background: linear-gradient(135deg, #84cc16, #22c55e);
+color: #fff;
+border: none;
+padding: var(--spacing-sm) var(--spacing-xl);
+border-radius: var(--border-radius-lg);
+cursor: pointer;
+margin: 0 auto var(--spacing-sm);
+display: flex;
+align-items: center;
+gap: var(--spacing-sm);
+font-family: 'Rubik', sans-serif;
+font-size: var(--font-size-md);
+font-weight: 500;
+transition: all var(--transition-speed);
+box-shadow: var(--box-shadow);
+}
+
+.shabbat-button:hover {
+transform: translateY(-2px);
+box-shadow: var(--box-shadow-hover);
+}
+
+.shabbat-button:active {
+transform: translateY(1px);
+}
+
+
+.button-row {
+display: flex;           
+justify-content: center; 
+align-items: center;     
+gap: 1rem;               
+margin: 16px 0;          
+}
+
+.shabbat-button,
+.refresh-button {
+margin: 0; /* override any auto-centering */
+}
+
+</style>
+
+
+<div class="container">
+    <div class="header">
+        <div class="title" id="main-title">טוען...</div>
+        <div class="location">מעלה אדומים</div>
+        <div class="parasha" id="parasha"></div>
+        <div class="event-text" id="holiday-text"></div>
+        <div class="event-text" id="next-event"></div>
     </div>
+    
+    <div class="times-container" id="times-container">
+        <div class="loading">טוען את הנתונים...</div>
+    </div>
+
+<div class="button-row">
+    <button id="toggle-shabbat-button" class="shabbat-button">הפעל מצב שבת</button>
+    <button id="refresh-button" class="refresh-button">רענן נתונים</button>
+</div>
+
+<div id="status-message" class="status-message"></div>
+<div class="date-info" id="date-info"></div>
+</div>
+
 <script>
-        stio.ready(function(data) {
-            // API and Location Constants
-            const HEBCAL_API_BASE = 'https://www.hebcal.com';
-            const LOCATION_ID = '6693680'; // Maale Adumim geonameid
-            const REFRESH_INTERVAL = 3600000; // 1 hour in milliseconds
-            const HOLIDAY_REFRESH_INTERVAL = 300000; // 5 minutes during holidays
-            const MAX_RETRY_ATTEMPTS = 3;
-            const RETRY_DELAY = 5000; // 5 seconds
+// =========================================
+// stio.ready => Main Entry Point
+// =========================================
+stio.ready(function(data) {
+// Grab references to our tile settings
+// 1) Shabbat Switch
+const mySwitch = data.settings.mySwitch;
+// 2) Disable Automation
+let automationDisabled = data.settings.disableAutomation || false;
 
-            // Holiday Categories and Types
-            const HOLIDAY_TYPES = {
-                YOM_TOV: {
-                    type: 'yom_tov',
-                    icon: '✡️',
-                    className: 'yomtov',
-                    events: [
-                        'Rosh Hashana', 'Yom Kippur', 'Sukkot', 'Shmini Atzeret', 
-                        'Simchat Torah', 'Pesach', 'Shavuot'
-                    ]
-                },
-                MINOR_HOLIDAY: {
-                    type: 'minor',
-                    icon: '✡️',
-                    className: 'holiday',
-                    events: [
-                        'Chanukah', 'Tu BiShvat', 'Purim', 'Lag BaOmer', 'Tu B\'Av',
-                        'Chag HaBanot', 'Purim Katan', 'Shushan Purim', 'Pesach Sheni'
-                    ]
-                },
-                FAST_DAYS: {
-                    type: 'fast',
-                    icon: '⏰',
-                    className: 'fast',
-                    events: [
-                        'Tish\'a B\'Av', 'Tzom Gedaliah', 'Asara B\'Tevet',
-                        'Ta\'anit Esther', 'Ta\'anit Bechorot', 'Tzom Tammuz'
-                    ]
-                },
-                MODERN_HOLIDAYS: {
-                    type: 'modern',
-                    icon: '🇮🇱',
-                    className: 'modern',
-                    events: [
-                        'Yom HaShoah', 'Yom HaZikaron', 'Yom HaAtzma\'ut',
-                        'Yom Yerushalayim', 'Yom HaAliyah'
-                    ]
-                },
-                SPECIAL_SHABBAT: {
-                    type: 'special_shabbat',
-                    icon: '🕍',
-                    className: 'shabbat',
-                    events: [
-                        'Shabbat Shuva', 'Shabbat Shirah', 'Shabbat Shekalim',
-                        'Shabbat Zachor', 'Shabbat Parah', 'Shabbat HaChodesh',
-                        'Shabbat HaGadol', 'Shabbat Chazon', 'Shabbat Nachamu'
-                    ]
-                },
-                ROSH_CHODESH: {
-                    type: 'rosh_chodesh',
-                    icon: '🌒',
-                    className: 'holiday',
-                    events: ['Rosh Chodesh']
-                }
-            };
+// API and Location Constants
+const HEBCAL_API_BASE = 'https://www.hebcal.com';
+const LOCATION_ID = '6693680'; // Maale Adumim geonameid
+const REFRESH_INTERVAL = 3600000; // 1 hour in milliseconds
+const HOLIDAY_REFRESH_INTERVAL = 300000; // 5 minutes during holidays
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 5000; // 5 seconds
+let isUpdating = false;
 
-            // Hebrew Numbers for Chanukah
-            const CHANUKAH_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שביעי', 'שמיני'];
+// Holiday Categories and Types
+const HOLIDAY_TYPES = {
+    YOM_TOV: {
+        type: 'yom_tov',
+        icon: '✡️',
+        className: 'yomtov',
+        events: [
+            'Rosh Hashana', 'Yom Kippur', 'Sukkot', 'Shmini Atzeret', 
+            'Simchat Torah', 'Pesach', 'Shavuot'
+        ]
+    },
+    MINOR_HOLIDAY: {
+        type: 'minor',
+        icon: '✡️',
+        className: 'holiday',
+        events: [
+            'Chanukah', 'Tu BiShvat', 'Purim', 'Lag BaOmer', 'Tu B\'Av',
+            'Chag HaBanot', 'Purim Katan', 'Shushan Purim', 'Pesach Sheni'
+        ]
+    },
+    FAST_DAYS: {
+        type: 'fast',
+        icon: '⏰',
+        className: 'fast',
+        events: [
+            'Tish\'a B\'Av', 'Tzom Gedaliah', 'Asara B\'Tevet',
+            'Ta\'anit Esther', 'Ta\'anit Bechorot', 'Tzom Tammuz'
+        ]
+    },
+    MODERN_HOLIDAYS: {
+        type: 'modern',
+        icon: '🇮🇱',
+        className: 'modern',
+        events: [
+            'Yom HaShoah', 'Yom HaZikaron', 'Yom HaAtzma\'ut',
+            'Yom Yerushalayim', 'Yom HaAliyah'
+        ]
+    },
+    SPECIAL_SHABBAT: {
+        type: 'special_shabbat',
+        icon: '🕍',
+        className: 'shabbat',
+        events: [
+            'Shabbat Shuva', 'Shabbat Shirah', 'Shabbat Shekalim',
+            'Shabbat Zachor', 'Shabbat Parah', 'Shabbat HaChodesh',
+            'Shabbat HaGadol', 'Shabbat Chazon', 'Shabbat Nachamu'
+        ]
+    },
+    ROSH_CHODESH: {
+        type: 'rosh_chodesh',
+        icon: '🌒',
+        className: 'holiday',
+        events: ['Rosh Chodesh']
+    }
+};
 
-            // Icons for Different Events
-            const ICONS = {
-                candles: "M20,11H23V13H20V11M1,11H4V13H1V11M13,1V4H11V1H13M4.92,3.5L7.05,5.64L5.63,7.05L3.5,4.93L4.92,3.5M16.95,5.63L19.07,3.5L20.5,4.93L18.37,7.05L16.95,5.63M12,6A6,6 0 0,1 18,12C18,14.22 16.79,16.16 15,17.2V19A1,1 0 0,1 14,20H10A1,1 0 0,1 9,19V17.2C7.21,16.16 6,14.22 6,12A6,6 0 0,1 12,6M14,21V22A1,1 0 0,1 13,23H11A1,1 0 0,1 10,22V21H14M11,18H13V15.87C14.73,15.43 16,13.86 16,12A4,4 0 0,0 12,8A4,4 0 0,0 8,12C8,13.86 9.27,15.43 11,15.87V18Z",
-                havdalah: "M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z",
-                fast: "M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z"
-            };
+// Hebrew Numbers for Chanukah
+const CHANUKAH_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שביעי', 'שמיני'];
 
-            // Utility Functions
-            function formatTime(dateStr) {
-                if (!dateStr) return '';
-                try {
-                    const date = new Date(dateStr);
-                    return date.toLocaleTimeString('he-IL', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false
-                    });
-                } catch (error) {
-                    console.error('Error formatting time:', error);
-                    throw new Error('זמן לא תקין');
-                }
-            }
+// Icons for Different Events
+const ICONS = {
+    candles: "M20,11H23V13H20V11M1,11H4V13H1V11M13,1V4H11V1H13M4.92,3.5L7.05,5.64L5.63,7.05L3.5,4.93L4.92,3.5M16.95,5.63L19.07,3.5L20.5,4.93L18.37,7.05L16.95,5.63M12,6A6,6 0 0,1 18,12C18,14.22 16.79,16.16 15,17.2V19A1,1 0 0,1 14,20H10A1,1 0 0,1 9,19V17.2C7.21,16.16 6,14.22 6,12A6,6 0 0,1 12,6M14,21V22A1,1 0 0,1 13,23H11A1,1 0 0,1 10,22V21H14M11,18H13V15.87C14.73,15.43 16,13.86 16,12A4,4 0 0,0 12,8A4,4 0 0,0 8,12C8,13.86 9.27,15.43 11,15.87V18Z",
+    havdalah: "M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z",
+    fast: "M12,2A7,7 0 0,0 5,9C5,11.38 6.19,13.47 8,14.74V17A1,1 0 0,0 9,18H15A1,1 0 0,0 16,17V14.74C17.81,13.47 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21V20H9V21Z"
+};
 
-            function formatHebrewDate(dateStr) {
-                if (!dateStr) return '';
-                try {
-                    const date = new Date(dateStr);
-                    return date.toLocaleDateString('he-IL', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                    });
-                } catch (error) {
-                    console.error('Error formatting date:', error);
-                    throw new Error('תאריך לא תקין');
-                }
-            }
-
-            function isWithinWeek(date) {
-                const now = new Date();
-                const oneWeek = 7 * 24 * 60 * 60 * 1000;
-                const timeDiff = date.getTime() - now.getTime();
-                return timeDiff > 0 && timeDiff <= oneWeek;
-            }
-
-            function isTomorrow(date) {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                return tomorrow.toDateString() === date.toDateString();
-            }
-
-            function isSameDay(date1, date2) {
-                return date1.getFullYear() === date2.getFullYear() &&
-                       date1.getMonth() === date2.getMonth() &&
-                       date1.getDate() === date2.getDate();
-            }
-
-            // Event Information Functions
-            function getHolidayType(event) {
-                // Check each holiday type for matching events
-                for (const [key, type] of Object.entries(HOLIDAY_TYPES)) {
-                    if (type.events.some(h => 
-                        event.title?.includes(h) || 
-                        event.hebrew?.includes(h))) {
-                        return type;
-                    }
-                }
-
-                // Check by category and subcat
-                if (event.subcat === 'major') return HOLIDAY_TYPES.YOM_TOV;
-                if (event.subcat === 'minor') return HOLIDAY_TYPES.MINOR_HOLIDAY;
-                if (event.subcat === 'fast') return HOLIDAY_TYPES.FAST_DAYS;
-                if (event.category === 'roshchodesh') return HOLIDAY_TYPES.ROSH_CHODESH;
-                if (event.subcat === 'modern') return HOLIDAY_TYPES.MODERN_HOLIDAYS;
-                if (event.category === 'parashat') return HOLIDAY_TYPES.SPECIAL_SHABBAT;
-
-                return HOLIDAY_TYPES.MINOR_HOLIDAY;
-            }
-
-            function getChanukahInfo(title) {
-                if (!title?.includes('חֲנוּכָּה') && !title?.includes('Chanukah')) return null;
-                
-                const hebrewMatch = title.match(/חֲנוּכָּה: ([א-ת]׳)/);
-                const englishMatch = title.match(/Chanukah: (\d+)/);
-                
-                let candleNum;
-                if (hebrewMatch) {
-                    const hebrewToNum = {
-                        'א': 1, 'ב': 2, 'ג': 3, 'ד': 4,
-                        'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8
-                    };
-                    candleNum = hebrewToNum[hebrewMatch[1].replace('׳', '')];
-                } else if (englishMatch) {
-                    candleNum = parseInt(englishMatch[1]);
-                }
-                
-                if (!candleNum || candleNum < 1 || candleNum > 8) return null;
-                
-                return {
-                    number: candleNum,
-                    hebrewNumber: CHANUKAH_DAYS[candleNum - 1]
-                };
-            }
-
-            // UI Building Functions
-            function createTimeBox(label, time, icon, description = '') {
-                return `
-                    <div class="time-box">
-                        <div class="time-label">
-                            <svg class="icon" viewBox="0 0 24 24">
-                                <path d="${icon}"/>
-                            </svg>
-                            ${label}
-                        </div>
-                        <div class="time-value">${time}</div>
-                        ${description ? `<div class="time-description">${description}</div>` : ''}
-                    </div>
-                `;
-            }
-
-            function showError(message) {
-                const container = document.getElementById('times-container');
-                container.innerHTML = `<div class="error-message">${message}</div>`;
-            }
-          // Display Update Functions
-            function updateMainDisplay(event) {
-                const mainTitle = document.getElementById('main-title');
-                const holidayText = document.getElementById('holiday-text');
-                
-                if (!event) {
-                    mainTitle.textContent = 'זמני היום';
-                    holidayText.classList.add('hidden');
-                    return;
-                }
-
-                // Handle Chanukah specially
-                if (event.title?.includes('חֲנוּכָּה') || event.title?.includes('Chanukah')) {
-                    const chanukahInfo = getChanukahInfo(event.title);
-                    if (chanukahInfo) {
-                        mainTitle.textContent = `נר ${chanukahInfo.hebrewNumber} של חנוכה`;
-                        holidayText.textContent = 'חג חנוכה שמח';
-                        holidayText.classList.remove('hidden');
-                        return;
-                    }
-                }
-
-                // Get holiday type and format display
-                const holidayType = getHolidayType(event);
-                mainTitle.textContent = `${holidayType.icon} ${event.hebrew}`;
-
-                // Handle special texts for different holiday types
-                if (holidayType.type === 'yom_tov') {
-                    holidayText.textContent = 'חג שמח';
-                    holidayText.className = 'event-text yomtov';
-                    holidayText.classList.remove('hidden');
-                } else if (holidayType.type === 'fast') {
-                    holidayText.textContent = 'צום קל';
-                    holidayText.className = 'event-text fast';
-                    holidayText.classList.remove('hidden');
-                } else if (holidayType.type === 'modern') {
-                    holidayText.className = 'event-text modern';
-                    holidayText.classList.remove('hidden');
-                } else {
-                    holidayText.classList.add('hidden');
-                }
-            }
-
-            function updateNextEvent(events) {
-                const nextEvent = document.getElementById('next-event');
-                const now = new Date();
-                
-                // Filter and sort future events
-                const futureEvents = events
-                    .filter(event => {
-                        const eventDate = new Date(event.date);
-                        return eventDate > now && 
-                               isWithinWeek(eventDate) && 
-                               (event.category === 'holiday' ||
-                                event.title?.includes('חֲנוּכָּה') ||
-                                event.subcat === 'major' ||
-                                event.subcat === 'fast');
-                    })
-                    .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                const upcoming = futureEvents[0];
-                if (!upcoming) {
-                    nextEvent.classList.add('hidden');
-                    return;
-                }
-
-                const eventDate = new Date(upcoming.date);
-                const holidayType = getHolidayType(upcoming);
-                
-                // Handle Chanukah specifically
-                if (upcoming.title?.includes('חֲנוּכָּה') || upcoming.title?.includes('Chanukah')) {
-                    const chanukahInfo = getChanukahInfo(upcoming.title);
-                    if (chanukahInfo) {
-                        nextEvent.textContent = isTomorrow(eventDate)
-                            ? `מחר בערב: נר ${chanukahInfo.hebrewNumber} של חנוכה`
-                            : `${formatHebrewDate(upcoming.date)}: נר ${chanukahInfo.hebrewNumber} של חנוכה`;
-                        nextEvent.classList.remove('hidden');
-                        nextEvent.className = `event-text ${holidayType.className}`;
-                        return;
-                    }
-                }
-
-                // Format text based on holiday type
-                let eventText = `${holidayType.icon} ${upcoming.hebrew}`;
-                if (upcoming.category === 'candles') {
-                    eventText = `הדלקת נרות - ${formatTime(upcoming.date)}`;
-                }
-
-                nextEvent.textContent = isTomorrow(eventDate)
-                    ? `מחר: ${eventText}`
-                    : `${formatHebrewDate(upcoming.date)}: ${eventText}`;
-                nextEvent.classList.remove('hidden');
-                nextEvent.className = `event-text ${holidayType.className}`;
-            }
-
-            function updateParashaAndShabbat(shabbatData) {
-                const timesContainer = document.getElementById('times-container');
-                const dateInfo = document.getElementById('date-info');
-                let timesHTML = '';
-
-                const candleLighting = shabbatData.items.find(item => item.category === 'candles');
-                const havdalah = shabbatData.items.find(item => item.category === 'havdalah');
-                const parasha = shabbatData.items.find(item => item.category === 'parashat');
-
-                // Update parasha in white
-                if (parasha) {
-                    const parashaElement = document.getElementById('parasha');
-                    parashaElement.textContent = parasha.hebrew;
-                    parashaElement.style.color = '#ffffff';
-                    parashaElement.classList.remove('hidden');
-                }
-
-                // Always show Shabbat times
-                if (candleLighting) {
-                    timesHTML += createTimeBox('הדלקת נרות', formatTime(candleLighting.date), ICONS.candles);
-                    // Update date info to show Friday's date
-                    dateInfo.textContent = formatHebrewDate(candleLighting.date);
-                }
-
-                if (havdalah) {
-                    timesHTML += createTimeBox('צאת השבת', formatTime(havdalah.date), ICONS.havdalah);
-                }
-
-                timesContainer.innerHTML = timesHTML;
-            }
-
-            // API Functions
-            async function fetchWithRetry(url, options = {}, retries = MAX_RETRY_ATTEMPTS) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        throw new Error(`שגיאה בטעינת הנתונים: ${response.status}`);
-                    }
-                    const data = await response.json();
-                    if (!data || !data.items) {
-                        throw new Error('התקבלו נתונים לא תקינים מהשרת');
-                    }
-                    return data;
-                } catch (error) {
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-                        return fetchWithRetry(url, options, retries - 1);
-                    }
-                    throw error;
-                }
-            }
-
-            async function fetchJewishCalendar() {
-                const now = new Date();
-                const nextYear = new Date(now);
-                nextYear.setFullYear(now.getFullYear() + 1);
-
-                const params = new URLSearchParams({
-                    cfg: 'json',
-                    geonameid: LOCATION_ID,
-                    M: 'on',
-                    lg: 'he',
-                    start: now.toISOString().split('T')[0],
-                    end: nextYear.toISOString().split('T')[0],
-                    maj: 'on',
-                    min: 'on',
-                    mod: 'on',
-                    nx: 'on',
-                    ss: 'on',
-                    mf: 'on',
-                    c: 'on'
-                });
-
-                return fetchWithRetry(`${HEBCAL_API_BASE}/hebcal?${params}`);
-            }
-
-            async function fetchShabbatTimes() {
-                const params = new URLSearchParams({
-                    cfg: 'json',
-                    geonameid: LOCATION_ID,
-                    M: 'on',
-                    lg: 'he'
-                });
-
-                return fetchWithRetry(`${HEBCAL_API_BASE}/shabbat?${params}`);
-            }
-
-            // Main Update Function
-            async function updateDisplay() {
-                try {
-                    const [calendarData, shabbatData] = await Promise.all([
-                        fetchJewishCalendar(),
-                        fetchShabbatTimes()
-                    ]);
-
-                    // Always update Shabbat times first
-                    updateParashaAndShabbat(shabbatData);
-
-                    if (calendarData.items && calendarData.items.length > 0) {
-                        const now = new Date();
-                        const currentEvent = calendarData.items.find(item => {
-                            const itemDate = new Date(item.date);
-                            return isSameDay(itemDate, now);
-                        });
-
-                        // Update displays
-                        updateMainDisplay(currentEvent);
-                        updateNextEvent(calendarData.items);
-                    }
-
-                } catch (error) {
-                    console.error('Error updating display:', error);
-                    showError('אירעה שגיאה בטעינת הנתונים. אנא נסו שוב מאוחר יותר.');
-                }
-            }
-
-            // Initialize with proper update intervals
-            async function initialize() {
-                try {
-                    await updateDisplay();
-                    
-                    // Check every minute for critical times
-                    setInterval(() => {
-                        const now = new Date();
-                        const hour = now.getHours();
-                        const minute = now.getMinutes();
-                        
-                        // Update more frequently during key times
-                        const isKeyTime = 
-                            (hour >= 16 && hour <= 18) || // Around candle lighting
-                            (hour >= 23 || hour <= 1);    // Around midnight
-                        
-                        if (isKeyTime) {
-                            updateDisplay().catch(console.error);
-                        }
-                    }, 60000); // Every minute
-
-                    // Regular updates
-                    setInterval(() => {
-                        updateDisplay().catch(console.error);
-                    }, REFRESH_INTERVAL);
-
-                    // Update when tab becomes visible
-                    document.addEventListener('visibilitychange', () => {
-                        if (document.visibilityState === 'visible') {
-                            updateDisplay().catch(console.error);
-                        }
-                    });
-
-                } catch (error) {
-                    console.error('שגיאה באתחול המערכת:', error);
-                    showError('אירעה שגיאה באתחול המערכת. אנא טענו מחדש את הדף.');
-                }
-            }
-
-            // Start the application
-            initialize();
+// ===========================
+//    Utility Functions
+// ===========================
+function formatTime(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        return date.toLocaleTimeString('he-IL', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
         });
-    </script>
-</body>
-</html>
-           
+    } catch (error) {
+        console.error('Error formatting time:', error);
+        throw new Error('זמן לא תקין');
+    }
+}
 
-      
+function formatHebrewDate(dateStr, useShortFormat = false) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        const options = useShortFormat ? 
+            { day: 'numeric', month: 'short' } : 
+            { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        return date.toLocaleDateString('he-IL', options);
+    } catch (error) {
+        console.error('Error formatting date:', error);
+        throw new Error('תאריך לא תקין');
+    }
+}
+
+function showStatusMessage(message, type = 'success') {
+    const statusElement = document.getElementById('status-message');
+    statusElement.textContent = message;
+    statusElement.className = `status-message ${type} show`;
+    
+    setTimeout(() => {
+        statusElement.className = 'status-message';
+    }, 3000);
+}
+
+function isWithinWeek(date) {
+    const now = new Date();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    const timeDiff = date.getTime() - now.getTime();
+    return timeDiff > 0 && timeDiff <= oneWeek;
+}
+
+function isTomorrow(date) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toDateString() === date.toDateString();
+}
+
+function isSameDay(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+}
+
+function logNextUpdate() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    let nextUpdateMinute;
+    let nextUpdateHour = currentHour;
+    
+    if (currentHour === 4 && currentMinute >= 45) {
+        // Approaching 5 AM update
+        nextUpdateMinute = 0;
+        nextUpdateHour = 5;
+    } else if (currentHour >= 16 && currentHour <= 18) {
+        // During candle lighting times
+        nextUpdateMinute = Math.ceil(currentMinute / 15) * 15;
+    } else if (currentHour >= 23) {
+        // Late night
+        nextUpdateMinute = Math.ceil(currentMinute / 15) * 15;
+    } else {
+        // Regular hours - update at the top of next hour
+        nextUpdateMinute = 0;
+        nextUpdateHour = currentHour + 1;
+    }
+    
+    if (nextUpdateMinute >= 60) {
+        nextUpdateMinute = 0;
+        nextUpdateHour++;
+    }
+    
+    if (nextUpdateHour >= 24) {
+        nextUpdateHour = 0;
+    }
+    
+    console.log(`Current time: ${currentHour}:${currentMinute}`);
+    console.log(`Next scheduled update: ${nextUpdateHour}:${String(nextUpdateMinute).padStart(2, '0')}`);
+}
+
+// ===========================
+//  Event Information Helpers
+// ===========================
+function getHolidayType(event) {
+    for (const [key, type] of Object.entries(HOLIDAY_TYPES)) {
+        if (type.events.some(h => 
+            event.title?.includes(h) || 
+            event.hebrew?.includes(h))) {
+            return type;
+        }
+    }
+    if (event.subcat === 'major') return HOLIDAY_TYPES.YOM_TOV;
+    if (event.subcat === 'minor') return HOLIDAY_TYPES.MINOR_HOLIDAY;
+    if (event.subcat === 'fast') return HOLIDAY_TYPES.FAST_DAYS;
+    if (event.category === 'roshchodesh') return HOLIDAY_TYPES.ROSH_CHODESH;
+    if (event.subcat === 'modern') return HOLIDAY_TYPES.MODERN_HOLIDAYS;
+    if (event.category === 'parashat') return HOLIDAY_TYPES.SPECIAL_SHABBAT;
+
+    return HOLIDAY_TYPES.MINOR_HOLIDAY;
+}
+
+function getChanukahInfo(title) {
+    if (!title?.includes('חֲנוּכָּה') && !title?.includes('Chanukah')) return null;
+    
+    const hebrewMatch = title.match(/חֲנוּכָּה: ([א-ת]׳)/);
+    const englishMatch = title.match(/Chanukah: (\d+)/);
+    
+    let candleNum;
+    if (hebrewMatch) {
+        const hebrewToNum = {
+            'א': 1, 'ב': 2, 'ג': 3, 'ד': 4,
+            'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8
+        };
+        candleNum = hebrewToNum[hebrewMatch[1].replace('׳', '')];
+    } else if (englishMatch) {
+        candleNum = parseInt(englishMatch[1]);
+    }
+    
+    if (!candleNum || candleNum < 1 || candleNum > 8) return null;
+    
+    return {
+        number: candleNum,
+        hebrewNumber: CHANUKAH_DAYS[candleNum - 1]
+    };
+}
+
+// ===========================
+// UI Building
+// ===========================
+function createTimeBox(label, time, icon, description = '') {
+    return `
+        <div class="time-box">
+            <div class="time-label">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="${icon}"/>
+                </svg>
+                ${label}
+            </div>
+            <div class="time-value">${time}</div>
+            ${description ? `<div class="time-description">${description}</div>` : ''}
+        </div>
+    `;
+}
+
+function showError(message) {
+    const container = document.getElementById('times-container');
+    container.innerHTML = `<div class="error-message">${message}</div>`;
+    showStatusMessage(message, 'error');
+}
+
+function updateMainDisplay(event) {
+    const mainTitle = document.getElementById('main-title');
+    const holidayText = document.getElementById('holiday-text');
+    
+    if (!event) {
+        mainTitle.textContent = 'זמני היום';
+        holidayText.classList.add('hidden');
+        return;
+    }
+
+    if (event.title?.includes('חֲנוּכָּה') || event.title?.includes('Chanukah')) {
+        const chanukahInfo = getChanukahInfo(event.title);
+        if (chanukahInfo) {
+            mainTitle.textContent = `נר ${chanukahInfo.hebrewNumber} של חנוכה`;
+            holidayText.textContent = 'חג חנוכה שמח';
+            holidayText.classList.remove('hidden');
+            return;
+        }
+    }
+
+    const holidayType = getHolidayType(event);
+    mainTitle.textContent = `${holidayType.icon} ${event.hebrew}`;
+
+    if (holidayType.type === 'yom_tov') {
+        holidayText.textContent = 'חג שמח';
+        holidayText.className = 'event-text yomtov';
+        holidayText.classList.remove('hidden');
+    } else if (holidayType.type === 'fast') {
+        holidayText.textContent = 'צום קל';
+        holidayText.className = 'event-text fast';
+        holidayText.classList.remove('hidden');
+    } else if (holidayType.type === 'modern') {
+        holidayText.className = 'event-text modern';
+        holidayText.classList.remove('hidden');
+    } else {
+        holidayText.classList.add('hidden');
+    }
+}
+
+function updateNextEvent(events) {
+    const nextEvent = document.getElementById('next-event');
+    const now = new Date();
+    // Set time to 5 AM tomorrow
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(5, 0, 0, 0);
+    
+    const futureEvents = events
+        .filter(event => {
+            const eventDate = new Date(event.date);
+            return eventDate >= tomorrow && 
+                isWithinWeek(eventDate) && 
+                (event.category === 'holiday' ||
+                 event.title?.includes('חֲנוּכָּה') ||
+                 event.subcat === 'major' ||
+                 event.subcat === 'fast' ||
+                 event.category === 'candles');
+        })
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const upcoming = futureEvents[0];
+    if (!upcoming) {
+        nextEvent.classList.add('hidden');
+        return;
+    }
+
+    const eventDate = new Date(upcoming.date);
+    const holidayType = getHolidayType(upcoming);
+    const formattedDate = formatHebrewDate(upcoming.date);
+    
+    let eventText = '';
+    if (upcoming.title?.includes('חֲנוּכָּה') || upcoming.title?.includes('Chanukah')) {
+        const chanukahInfo = getChanukahInfo(upcoming.title);
+        if (chanukahInfo) {
+            eventText = `${formattedDate}: נר ${chanukahInfo.hebrewNumber} של חנוכה`;
+        }
+    } else {
+        if (upcoming.category === 'candles') {
+            eventText = `הדלקת נרות הבאה - ${formattedDate}: ${formatTime(upcoming.date)}`;
+        } else {
+            eventText = `${formattedDate}: ${holidayType.icon} ${upcoming.hebrew}`;
+        }
+    }
+
+    // Add class for styling
+    nextEvent.innerHTML = `<div class="upcoming-indicator">⏳</div>${eventText}`;
+    nextEvent.classList.remove('hidden');
+    nextEvent.className = `event-text ${holidayType.className}`;
+}
+
+function updateParashaAndShabbat(shabbatData) {
+    const timesContainer = document.getElementById('times-container');
+    const dateInfo = document.getElementById('date-info');
+    let timesHTML = '';
+
+    const candleLighting = shabbatData.items.find(item => item.category === 'candles');
+    const havdalah = shabbatData.items.find(item => item.category === 'havdalah');
+    const parasha = shabbatData.items.find(item => item.category === 'parashat');
+
+    if (parasha) {
+        const parashaElement = document.getElementById('parasha');
+        parashaElement.textContent = parasha.hebrew;
+        parashaElement.style.color = '#ffffff';
+        parashaElement.classList.remove('hidden');
+    }
+
+    if (candleLighting) {
+        timesHTML += createTimeBox('הדלקת נרות', formatTime(candleLighting.date), ICONS.candles);
+        dateInfo.textContent = formatHebrewDate(candleLighting.date);
+    }
+
+    if (havdalah) {
+        timesHTML += createTimeBox('צאת השבת', formatTime(havdalah.date), ICONS.havdalah);
+    }
+
+    timesContainer.innerHTML = timesHTML || '<div class="no-times">אין זמנים זמינים</div>';
+}
+
+// ===========================
+//    API Functions
+// ===========================
+async function fetchWithRetry(url, options = {}, retries = MAX_RETRY_ATTEMPTS) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            if (!data || !data.items) {
+                throw new Error('Invalid data structure received');
+            }
+            return data;
+        } catch (error) {
+            console.error(`Attempt ${i + 1} failed:`, error);
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        }
+    }
+}
+
+async function fetchJewishCalendar() {
+    const now = new Date();
+    const nextYear = new Date(now);
+    nextYear.setFullYear(now.getFullYear() + 1);
+
+    const params = new URLSearchParams({
+        cfg: 'json',
+        geonameid: LOCATION_ID,
+        M: 'on',
+        lg: 'he',
+        start: now.toISOString().split('T')[0],
+        end: nextYear.toISOString().split('T')[0],
+        maj: 'on',
+        min: 'on',
+        mod: 'on',
+        nx: 'on',
+        ss: 'on',
+        mf: 'on',
+        c: 'on'
+    });
+
+    return fetchWithRetry(`${HEBCAL_API_BASE}/hebcal?${params}`);
+}
+
+async function fetchShabbatTimes() {
+    const params = new URLSearchParams({
+        cfg: 'json',
+        geonameid: LOCATION_ID,
+        M: 'on',
+        lg: 'he'
+    });
+    return fetchWithRetry(`${HEBCAL_API_BASE}/shabbat?${params}`);
+}
+
+// ===========================
+//   Main Update Functions
+// ===========================
+async function updateDisplay() {
+    if (isUpdating) return;
+    isUpdating = true;
+    
+    const refreshButton = document.getElementById('refresh-button');
+    if (refreshButton) {
+        refreshButton.classList.add('loading');
+        refreshButton.disabled = true;
+    }
+
+    try {
+        console.log('Starting display update at:', new Date().toLocaleTimeString());
+        const [calendarData, shabbatData] = await Promise.all([
+            fetchJewishCalendar(),
+            fetchShabbatTimes()
+        ]);
+
+        console.log('Data fetched successfully');
+
+        updateParashaAndShabbat(shabbatData);
+
+        if (calendarData.items && calendarData.items.length > 0) {
+            const now = new Date();
+            const currentEvent = calendarData.items.find(item => {
+                const itemDate = new Date(item.date);
+                return isSameDay(itemDate, now);
+            });
+
+            updateMainDisplay(currentEvent);
+            updateNextEvent(calendarData.items);
+        }
+
+        showStatusMessage('הנתונים עודכנו בהצלחה');
+        logNextUpdate();
+
+    } catch (error) {
+        console.error('Error updating display:', error);
+        showError('אירעה שגיאה בטעינת הנתונים. אנא נסו שוב מאוחר יותר.');
+    } finally {
+        if (refreshButton) {
+            refreshButton.classList.remove('loading');
+            refreshButton.disabled = false;
+        }
+        isUpdating = false;
+    }
+}
+
+// ===========================
+// Shabbat Mode Automation
+// ===========================
+async function checkAndUpdateShabbatMode() {
+    try {
+        // If user disabled automation, skip
+        if (automationDisabled) {
+            console.log('Automation is disabled. Skipping auto mode changes.');
+            return;
+        }
+
+        const shabbatData = await fetchShabbatTimes();
+        const now = new Date();
+        const candleLighting = shabbatData.items.find(item => item.category === 'candles');
+        const havdalah = shabbatData.items.find(item => item.category === 'havdalah');
+
+        if (candleLighting && havdalah) {
+            const candleTime = new Date(candleLighting.date);
+            const havdalahTime = new Date(havdalah.date);
+
+            // Add logging for debugging
+            console.log('Current time:', now.toLocaleString());
+            console.log('Candle lighting time:', candleTime.toLocaleString());
+            console.log('Havdalah time:', havdalahTime.toLocaleString());
+
+            // Precise time comparison
+            const nowTime = now.getTime();
+            const candleTimeMs = candleTime.getTime();
+            const havdalahTimeMs = havdalahTime.getTime();
+
+            // Check for exact candle lighting time (within 1 minute)
+            if (Math.abs(nowTime - candleTimeMs) <= 60000) {
+                console.log('Exact candle lighting time - Setting Shabbat mode');
+                await stio.device('mode').sendCommand('setMode', ['Shabat']);
+                showStatusMessage('מצב שבת הופעל');
+            }
+            // Check for exact Havdalah time (within 1 minute)
+            else if (Math.abs(nowTime - havdalahTimeMs) <= 60000) {
+                console.log('Exact Havdalah time - Setting Home mode');
+                await stio.device('mode').sendCommand('setMode', ['Home']);
+                showStatusMessage('מצב שבת הסתיים');
+            }
+        }
+    } catch (error) {
+        console.error('Error in Shabbat mode control:', error);
+    }
+}
+
+// ===========================
+//     Initialize
+// ===========================
+async function initialize() {
+    try {
+        // Initial updates
+        await Promise.all([
+            updateDisplay(),
+            checkAndUpdateShabbatMode()
+        ]);
+        
+        // Main interval for updates
+        setInterval(async () => {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            
+            // Enhanced update conditions
+            const shouldUpdate = 
+                (hour === 5 && minute === 0) || // 5 AM update
+                ((hour >= 16 && hour <= 18) && minute % 15 === 0) || // Candle lighting times (4-6 PM)
+                ((hour === 19 || hour === 20) && minute % 15 === 0) || // After Shabbat start
+                (hour >= 23 && minute % 15 === 0) || // Late night
+                (minute === 0); // Every hour
+
+            // More precise checking for mode changes
+            const shouldCheckMode = 
+                ((hour >= 16 && hour <= 18) || // Around candle lighting
+                (hour >= 19 && hour <= 20));    // Around Havdalah
+
+            // Check if it's close to critical times
+            const isNearCriticalTime = 
+                // Near candle lighting
+                (hour === 16 && minute >= 45) || 
+                (hour === 17) || 
+                (hour === 18 && minute <= 15) ||
+                // Near Havdalah
+                (hour === 19 && minute >= 45) ||
+                (hour === 20 && minute <= 15);
+            
+            // Determine check interval based on time
+            const checkInterval = isNearCriticalTime ? 30000 : 60000; // 30 seconds near critical times
+            
+            if (shouldUpdate || isNearCriticalTime) {
+                console.log('Updating at:', hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'));
+                
+                try {
+                    // Update display
+                    await updateDisplay();
+
+                    // Check mode more frequently during critical times
+                    if (shouldCheckMode || isNearCriticalTime) {
+                        await checkAndUpdateShabbatMode();
+                    }
+
+                } catch (error) {
+                    console.error('Error during scheduled update:', error);
+                    showError('אירעה שגיאה בעדכון. מנסה שוב בקרוב.');
+                }
+            }
+
+            // Adjust interval if needed
+            if (this._interval && this._interval !== checkInterval) {
+                clearInterval(this._interval);
+                this._interval = setInterval(this._checkUpdates, checkInterval);
+            }
+
+        }, 30000); // Base interval of 30 seconds
+
+        // Refresh button handler with debounce
+        const refreshButton = document.getElementById('refresh-button');
+        if (refreshButton) {
+            let refreshTimeout;
+            refreshButton.addEventListener('click', async () => {
+                if (!isUpdating) {
+                    if (refreshTimeout) {
+                        clearTimeout(refreshTimeout);
+                    }
+                    
+                    refreshTimeout = setTimeout(async () => {
+                        console.log('Manual refresh requested');
+                        try {
+                            refreshButton.disabled = true;
+                            await Promise.all([
+                                updateDisplay(),
+                                checkAndUpdateShabbatMode()
+                            ]);
+                            showStatusMessage('הנתונים עודכנו בהצלחה');
+                        } catch (error) {
+                            console.error('Error during manual refresh:', error);
+                            showError('אירעה שגיאה בעדכון ידני');
+                        } finally {
+                            refreshButton.disabled = false;
+                            refreshTimeout = null;
+                        }
+                    }, 300); // 300ms debounce
+                }
+            });
+        }
+
+        // Visibility change handler with debounce
+        let visibilityTimeout;
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && !isUpdating) {
+                if (visibilityTimeout) {
+                    clearTimeout(visibilityTimeout);
+                }
+                
+                visibilityTimeout = setTimeout(async () => {
+                    console.log('Tab became visible, updating');
+                    try {
+                        await Promise.all([
+                            updateDisplay(),
+                            checkAndUpdateShabbatMode()
+                        ]);
+                    } catch (error) {
+                        console.error('Error during visibility update:', error);
+                    } finally {
+                        visibilityTimeout = null;
+                    }
+                }, 300); // 300ms debounce
+            }
+        });
+
+    } catch (error) {
+        console.error('שגיאה באתחול המערכת:', error);
+        showError('אירעה שגיאה באתחול המערכת. אנא טענו מחדש את הדף.');
+    }
+}
+
+// ===========================
+//   Manual Switch Control
+// ===========================
+const toggleButton = document.getElementById('toggle-shabbat-button');
+
+// Helper to update the button label based on switch state
+function updateToggleButtonLabel(state) {
+    if (state === 'on') {
+        toggleButton.textContent = 'כבה מצב שבת';
+    } else {
+        toggleButton.textContent = 'הפעל מצב שבת';
+    }
+}
+
+// If we have a valid Shabbat Switch, subscribe to updates and set initial label
+if (mySwitch) {
+    console.log('Shabbat Switch found:', mySwitch);
+    // Subscribe to real-time events
+    mySwitch.subscribe('switch');
+
+    // Listen for attribute changes
+    mySwitch.attributes['switch'].onValue((newVal) => {
+        console.log('Switch state changed to:', newVal);
+        updateToggleButtonLabel(newVal);
+    });
+
+    // Update the button label on tile load
+    const currentVal = mySwitch.attributes['switch'].value;
+    updateToggleButtonLabel(currentVal);
+
+    // On click, toggle the switch on/off
+    toggleButton.onclick = async () => {
+        if (!mySwitch) return;
+        const current = mySwitch.attributes['switch'].value;
+        const command = (current === 'on') ? 'off' : 'on';
+        console.log('Manual toggle. Sending command =>', command);
+        try {
+            await mySwitch.sendCommand(command);
+            showStatusMessage(command === 'on' ? 'המתג הופעל ידנית' : 'המתג כובה ידנית');
+        } catch (err) {
+            console.error('Error toggling switch:', err);
+            showError('שגיאה בהפעלת המתג');
+        }
+    };
+} else {
+    console.warn('No Shabbat Switch configured in Tile Settings');
+    toggleButton.textContent = 'לא נבחר מתג שבת';
+    toggleButton.disabled = true;
+}
+
+// ===========================
+//  Start the application
+// ===========================
+initialize();
+});
+</script>
+
+
